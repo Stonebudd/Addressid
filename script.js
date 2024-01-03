@@ -1,55 +1,42 @@
-// script.js
-const addressInput = document.getElementById('addressInput');
-const suggestionsContainer = document.getElementById('suggestionsContainer');
-
-let timeoutId;
-
-addressInput.addEventListener('input', function() {
-    clearTimeout(timeoutId); // Clear the previous timeout to debounce the input
-    const query = this.value;
-
-    if (query.length < 4) { // API requires a minimum of 4 characters
-        suggestionsContainer.innerHTML = '';
-        return;
-    }
-
-    // Wait for a short period before making API call to debounce the input
-    timeoutId = setTimeout(() => {
-        fetchSuggestions(query);
-    }, 300);
-});
-
-async function fetchSuggestions(query) {
-    try {
-        const response = await fetch(`https://api.psma.com.au/v1/predictive/address?query=${encodeURIComponent(query)}`, {
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': 'XeqZpzTGK6N2XW1DZLCgGsOkG5YuIVZL' // Replace with your actual API key
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        displaySuggestions(data.suggest);
-    } catch (error) {
-        console.error('Failed to fetch suggestions:', error);
-        suggestionsContainer.innerHTML = 'Failed to fetch suggestions.';
-    }
-}
-
-function displaySuggestions(suggestions) {
-    suggestionsContainer.innerHTML = ''; // Clear previous suggestions
-
-    suggestions.forEach(suggestion => {
-        const div = document.createElement('div');
-        div.textContent = suggestion.address; // Adjust according to the actual response structure
-        div.onclick = function() {
-            addressInput.value = this.textContent; // Update input field with selected suggestion
-            suggestionsContainer.innerHTML = ''; // Clear suggestions
-        };
-        suggestionsContainer.appendChild(div);
+document.getElementById('addressForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    
+    const addressId = document.getElementById('addressId').value;
+    const apiUrl = `https://api.psma.com.au/v1/predictive/address/${addressId}`;
+    const apiKey = 'XeqZpzTGK6N2XW1DZLCgGsOkG5YuIVZL'; // Replace with your actual API key
+  
+    fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': apiKey,
+        'Accept': 'application/json'
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      // Filter the data to only show the required parameters
+      const requiredData = {
+        unit_number: data.address.properties.unit_number,
+        street_number_1: data.address.properties.street_number_1,
+        street_number_2:data.address.properties.street_number_2,
+        street_name: data.address.properties.street_name,
+        street_type: data.address.properties.street_type,
+        suburb: data.address.properties.suburb,
+        state: data.address.properties.state,
+        postcode: data.address.properties.postcode,
+        property_type: data.address.properties.property_type,
+      };
+      
+      document.getElementById('result').innerHTML = `<pre>${JSON.stringify(requiredData, null, 2)}</pre>`;
+    })
+    .catch(error => {
+      console.error('There was a problem with the fetch operation:', error);
+      document.getElementById('result').textContent = 'Failed to fetch data.';
     });
-}
+  });
+  
